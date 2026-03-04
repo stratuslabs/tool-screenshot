@@ -1,0 +1,10 @@
+{
+  "name": "agent-screenshot",
+  "displayName": "Agent Screenshot",
+  "version": "0.1.0",
+  "description": "Capture screenshots (placeholder tool target).",
+  "author": "Stratus Labs",
+  "binary": "AgentScreenshot",
+  "platform": "macos-arm64",
+  "permissions": ["screen"]
+}
