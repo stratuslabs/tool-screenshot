@@ -48,7 +48,7 @@ agent-screenshot --window "Safari" --analyze "Is there a login form visible?"
   <br>
   Built for <a href="https://stratuslabs.io"><strong>StratusOS</strong></a> — your AI operating system.
   <br>
-  <a href="https://github.com/stratuslabs">GitHub</a> · <a href="https://discord.gg/stratuslabs">Discord</a>
+  <a href="https://github.com/stratuslabs">GitHub</a> · <a href="https://discord.gg/PNJseAMbPn">Discord</a>
   <br>
   <br>
   <sub>Made by <a href="https://github.com/stratuslabs">Stratus Labs</a></sub>
