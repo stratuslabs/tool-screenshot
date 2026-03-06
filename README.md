@@ -8,7 +8,7 @@ A **tool** for [StratusOS](https://stratuslabs.io) — the AI operating system f
 
 ## What it does
 
-Captures screen regions, windows, or full screens and optionally pipes them through a vision model for analysis. Perfect for visual QA, UI monitoring, and screenshot-driven workflows. Uses native macOS screen capture — no external dependencies.
+Captures screen regions, windows, or full screens and optionally pipes them through a vision model for analysis. Perfect for visual QA, UI monitoring, and screenshot-driven workflows. Uses **ScreenCaptureKit** (macOS 14+) for modern, performant screen capture — no external dependencies.
 
 ## Installation
 
@@ -22,6 +22,8 @@ git clone https://github.com/stratuslabs/tool-agent-screenshot.git ~/.stratusos/
 
 ## Usage
 
+### CLI Mode
+
 ```bash
 # Capture full screen
 agent-screenshot --output screen.png
@@ -32,15 +34,57 @@ agent-screenshot --window "Safari" --output safari.png
 # Capture a region
 agent-screenshot --region 0,0,800,600 --output region.png
 
-# Capture and analyze with vision model
+# Capture and analyze with vision model (TODO)
 agent-screenshot --window "Safari" --analyze "Is there a login form visible?"
+```
+
+### JSON Input Mode
+
+```bash
+# Full screen capture
+echo '{"command":"capture","args":{"output":"/tmp/screen.png"}}' | agent-screenshot --json
+
+# Window capture
+echo '{"command":"capture","args":{"window":"Safari","output":"/tmp/safari.png"}}' | agent-screenshot --json
+
+# Region capture
+echo '{"command":"capture","args":{"region":{"x":0,"y":0,"w":800,"h":600},"output":"/tmp/region.png"}}' | agent-screenshot --json
+```
+
+All commands return JSON output:
+```json
+{
+  "success": true,
+  "path": "/tmp/screen.png",
+  "width": 1920,
+  "height": 1080,
+  "format": "png"
+}
 ```
 
 ## Requirements
 
 - StratusOS v0.2.0+
-- macOS 15+ (Apple Silicon)
-- Screen Recording permission (prompted on first use)
+- macOS 14+ (Sonoma or later)
+- Apple Silicon or Intel
+- Screen Recording permission (System Settings > Privacy & Security > Screen Recording)
+
+## Building
+
+```bash
+./build.sh
+```
+
+Or manually:
+```bash
+swiftc -parse-as-library \
+    src/main.swift \
+    -framework ScreenCaptureKit \
+    -framework CoreGraphics \
+    -framework AppKit \
+    -framework Foundation \
+    -o agent-screenshot
+```
 
 ---
 

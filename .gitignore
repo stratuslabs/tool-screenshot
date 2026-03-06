@@ -1,0 +1,6 @@
+# Build artifacts
+agent-screenshot
+*.dSYM
+
+# macOS
+.DS_Store
