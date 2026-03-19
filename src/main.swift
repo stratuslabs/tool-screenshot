@@ -16,6 +16,7 @@ struct CaptureArgs: Codable {
     let region: RegionSpec?
     let format: String?
     let analyze: String?
+    let display: Int?
 }
 
 struct RegionSpec: Codable {
@@ -47,6 +48,7 @@ struct CLIArguments {
     var region: CGRect?
     var format: String = "png"
     var analyze: String?
+    var displayIndex: Int = 0
     var help: Bool = false
     var jsonInput: Bool = false
 }
@@ -84,6 +86,13 @@ func parseCLIArguments(_ args: [String]) -> CLIArguments {
                 result.analyze = args[i + 1]
                 i += 1
             }
+        case "--display", "-d":
+            if i + 1 < args.count {
+                if let idx = Int(args[i + 1]) {
+                    result.displayIndex = idx
+                }
+                i += 1
+            }
         case "--json":
             result.jsonInput = true
         case "--help", "-h":
@@ -110,12 +119,18 @@ func parseRegion(_ regionString: String) -> CGRect? {
 class ScreenshotCapture {
     
     // Capture full screen using ScreenCaptureKit
-    static func captureFullScreen() async throws -> CGImage {
+    static func captureFullScreen(displayIndex: Int = 0) async throws -> CGImage {
         let content = try await SCShareableContent.current
         
-        guard let display = content.displays.first else {
+        guard !content.displays.isEmpty else {
             throw CaptureError.noDisplayFound
         }
+        
+        guard displayIndex >= 0 && displayIndex < content.displays.count else {
+            throw CaptureError.displayIndexOutOfRange(index: displayIndex, count: content.displays.count)
+        }
+        
+        let display = content.displays[displayIndex]
         
         let filter = SCContentFilter(display: display, excludingWindows: [])
         let config = SCStreamConfiguration()
@@ -164,12 +179,18 @@ class ScreenshotCapture {
     }
     
     // Capture specific region
-    static func captureRegion(_ rect: CGRect) async throws -> CGImage {
+    static func captureRegion(_ rect: CGRect, displayIndex: Int = 0) async throws -> CGImage {
         let content = try await SCShareableContent.current
         
-        guard let display = content.displays.first else {
+        guard !content.displays.isEmpty else {
             throw CaptureError.noDisplayFound
         }
+        
+        guard displayIndex >= 0 && displayIndex < content.displays.count else {
+            throw CaptureError.displayIndexOutOfRange(index: displayIndex, count: content.displays.count)
+        }
+        
+        let display = content.displays[displayIndex]
         
         // Validate region bounds
         let displayWidth = CGFloat(display.width)
@@ -244,6 +265,7 @@ func saveImage(_ image: CGImage, to path: String, format: String) throws -> Stri
 
 enum CaptureError: Error, LocalizedError {
     case noDisplayFound
+    case displayIndexOutOfRange(index: Int, count: Int)
     case windowNotFound(String)
     case invalidRegion(CGRect)
     case cropFailed
@@ -254,6 +276,8 @@ enum CaptureError: Error, LocalizedError {
         switch self {
         case .noDisplayFound:
             return "No display found. Make sure a screen is connected."
+        case .displayIndexOutOfRange(let index, let count):
+            return "Display index \(index) is out of range. \(count) display(s) available (use 0-\(count - 1))."
         case .windowNotFound(let name):
             return "Window '\(name)' not found. Make sure the window is visible and the app is running."
         case .invalidRegion(let rect):
@@ -332,6 +356,7 @@ struct ScreenshotTool {
             --output, -o <path>           Output file path (default: screenshot.png)
             --window, -w <name>           Capture specific window by name
             --region, -r <x,y,w,h>        Capture region (e.g., 0,0,800,600)
+            --display, -d <index>         Display index for multi-monitor (default: 0)
             --format, -f <png|jpeg>       Output format (default: png)
             --analyze, -a <prompt>        Analyze screenshot with vision model (TODO)
             --json                        Accept JSON input from stdin
@@ -341,15 +366,19 @@ struct ScreenshotTool {
             # Capture full screen
             agent-screenshot --output screen.png
             
+            # Capture second display
+            agent-screenshot --display 1 --output display2.png
+            
             # Capture Safari window
             agent-screenshot --window "Safari" --output safari.png
             
-            # Capture region
-            agent-screenshot --region 0,0,800,600 --output region.png
+            # Capture region on a specific display
+            agent-screenshot --region 0,0,800,600 --display 1 --output region.png
             
             # JSON input mode
             echo '{"command":"capture","args":{"output":"/tmp/screen.png"}}' | agent-screenshot --json
             echo '{"command":"capture","args":{"window":"Safari","output":"/tmp/safari.png"}}' | agent-screenshot --json
+            echo '{"command":"capture","args":{"display":1,"output":"/tmp/display2.png"}}' | agent-screenshot --json
             echo '{"command":"capture","args":{"region":{"x":0,"y":0,"w":800,"h":600},"output":"/tmp/region.png"}}' | agent-screenshot --json
         
         REQUIREMENTS:
@@ -390,7 +419,8 @@ struct ScreenshotTool {
             window: command.args.window,
             region: command.args.region.map { CGRect(x: $0.x, y: $0.y, width: $0.w, height: $0.h) },
             format: format,
-            analyze: command.args.analyze
+            analyze: command.args.analyze,
+            displayIndex: command.args.display ?? 0
         )
     }
     
@@ -402,7 +432,8 @@ struct ScreenshotTool {
             window: cliArgs.window,
             region: cliArgs.region,
             format: cliArgs.format,
-            analyze: cliArgs.analyze
+            analyze: cliArgs.analyze,
+            displayIndex: cliArgs.displayIndex
         )
     }
     
@@ -411,7 +442,8 @@ struct ScreenshotTool {
         window: String?,
         region: CGRect?,
         format: String,
-        analyze: String?
+        analyze: String?,
+        displayIndex: Int = 0
     ) async {
         do {
             // Capture image based on mode
@@ -420,9 +452,9 @@ struct ScreenshotTool {
             if let windowName = window {
                 image = try await ScreenshotCapture.captureWindow(named: windowName)
             } else if let regionRect = region {
-                image = try await ScreenshotCapture.captureRegion(regionRect)
+                image = try await ScreenshotCapture.captureRegion(regionRect, displayIndex: displayIndex)
             } else {
-                image = try await ScreenshotCapture.captureFullScreen()
+                image = try await ScreenshotCapture.captureFullScreen(displayIndex: displayIndex)
             }
             
             // Save the image
