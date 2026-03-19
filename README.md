@@ -28,11 +28,17 @@ git clone https://github.com/stratuslabs/tool-agent-screenshot.git ~/.stratusos/
 # Capture full screen
 agent-screenshot --output screen.png
 
+# Capture a specific display (multi-monitor)
+agent-screenshot --display 1 --output display2.png
+
 # Capture a specific window
 agent-screenshot --window "Safari" --output safari.png
 
 # Capture a region
 agent-screenshot --region 0,0,800,600 --output region.png
+
+# Capture a region on a specific display
+agent-screenshot --region 0,0,800,600 --display 1 --output region.png
 
 # Capture and analyze with vision model (TODO)
 agent-screenshot --window "Safari" --analyze "Is there a login form visible?"
@@ -43,6 +49,9 @@ agent-screenshot --window "Safari" --analyze "Is there a login form visible?"
 ```bash
 # Full screen capture
 echo '{"command":"capture","args":{"output":"/tmp/screen.png"}}' | agent-screenshot --json
+
+# Capture a specific display
+echo '{"command":"capture","args":{"display":1,"output":"/tmp/display2.png"}}' | agent-screenshot --json
 
 # Window capture
 echo '{"command":"capture","args":{"window":"Safari","output":"/tmp/safari.png"}}' | agent-screenshot --json
